@@ -54,7 +54,7 @@ export default function StartScreen({ stats, user, onStart, onChangeUser }) {
       <div className="hero-card">
         <div className="hero-emoji">🐍</div>
         <h1 className="hero-title">파이썬 매일 학습</h1>
-        <p className="hero-sub">매일 10문제 · 중간고사 완벽 대비</p>
+        <p className="hero-sub">매일 10문제 · 기말고사 완벽 대비</p>
         <button className="btn-start" onClick={onStart}>
           오늘의 학습 시작 →
         </button>
