@@ -427,6 +427,19 @@ body {
   transition: background 0.15s;
 }
 .btn-pdf:hover { background: #3730A3; }
+.btn-pdf-secondary {
+  padding: 14px;
+  background: #E0E7FF;
+  color: #4338CA;
+  border: none;
+  border-radius: 10px;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.btn-pdf-secondary:hover { background: #C7D2FE; }
+
 .btn-retry {
   padding: 14px;
   background: #F59E0B;
@@ -545,6 +558,7 @@ body {
     margin-bottom: 16pt;
   }
   .print-main-title { font-size: 18pt; font-weight: 800; }
+  .print-label { font-size: 11pt; color: #4F46E5; font-weight: 700; margin-top: 4pt; }
   .print-date { font-size: 11pt; color: #666; margin-top: 4pt; }
   .print-score { font-size: 13pt; font-weight: 700; color: #4F46E5; margin-top: 6pt; }
 

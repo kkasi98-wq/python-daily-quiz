@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 
 const CATEGORY_LABELS = {
   variable:    '변수',
@@ -33,18 +33,7 @@ function CodeBlockPrint({ code }) {
   );
 }
 
-export default function CompletionScreen({ results, onRetryWrong, onHome }) {
-  const [expandedIdx, setExpandedIdx] = useState(null);
-  const wrongResults = results.filter(r => !r.isCorrect);
-  const correctCount = results.filter(r => r.isCorrect).length;
-  const total = results.length;
-  const pct = Math.round((correctCount / total) * 100);
-
-  const today = new Date().toLocaleDateString('ko-KR', {
-    year: 'numeric', month: 'long', day: 'numeric', weekday: 'long',
-  });
-
-  // Category breakdown for this session
+function buildCatMap(results) {
   const catMap = {};
   results.forEach(r => {
     const cat = r.question.category;
@@ -52,20 +41,125 @@ export default function CompletionScreen({ results, onRetryWrong, onHome }) {
     catMap[cat].total += 1;
     if (r.isCorrect) catMap[cat].correct += 1;
   });
+  return catMap;
+}
 
-  function handlePrint() {
-    window.print();
+function PrintView({ results, label }) {
+  const correctCount = results.filter(r => r.isCorrect).length;
+  const total = results.length;
+  const pct = Math.round((correctCount / total) * 100);
+  const catMap = buildCatMap(results);
+  const today = new Date().toLocaleDateString('ko-KR', {
+    year: 'numeric', month: 'long', day: 'numeric', weekday: 'long',
+  });
+
+  return (
+    <>
+      <div className="print-header">
+        <h1 className="print-main-title">🐍 파이썬 학습 결과</h1>
+        {label && <p className="print-label">{label}</p>}
+        <p className="print-date">{today}</p>
+        <p className="print-score">
+          정답 {correctCount} / {total} 문제 &nbsp;|&nbsp; 정답률 {pct}%
+        </p>
+      </div>
+
+      <table className="print-cat-table">
+        <thead>
+          <tr><th>영역</th><th>정답</th><th>전체</th><th>정답률</th></tr>
+        </thead>
+        <tbody>
+          {Object.entries(catMap).map(([cat, { correct, total: t }]) => (
+            <tr key={cat}>
+              <td>{CATEGORY_LABELS[cat]}</td>
+              <td>{correct}</td>
+              <td>{t}</td>
+              <td>{t > 0 ? Math.round((correct / t) * 100) : 0}%</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
+      <hr className="print-divider" />
+
+      {results.map((r, idx) => (
+        <div key={r.question.id + idx} className="print-question">
+          <div className="print-q-header">
+            <span className="print-q-num">문제 {idx + 1}</span>
+            <span className="print-q-cat">[{CATEGORY_LABELS[r.question.category]}]</span>
+            <span className={`print-q-result ${r.isCorrect ? 'print-correct' : 'print-wrong'}`}>
+              {r.isCorrect ? '⭕ 정답' : '❌ 오답'}
+            </span>
+          </div>
+          <p className="print-q-title">{r.question.title}</p>
+          {r.question.code && <CodeBlockPrint code={r.question.code} />}
+          {r.question.type === 'multiple_choice' && (
+            <ul className="print-choices">
+              {r.question.choices.map((c, ci) => (
+                <li
+                  key={ci}
+                  className={
+                    c === r.question.answer ? 'print-choice-correct' :
+                    c === r.userAnswer ? 'print-choice-wrong' : ''
+                  }
+                >
+                  {'①②③④⑤'[ci]} {c}
+                </li>
+              ))}
+            </ul>
+          )}
+          <div className="print-answer-line">
+            내 답: <strong>{r.userAnswer || '(미응답)'}</strong>
+            &nbsp;&nbsp; 정답: <strong className="green">{r.question.answer}</strong>
+          </div>
+          <div className="print-explanation">
+            <strong>📝 단계별 풀이</strong>
+            <ol>
+              {r.question.explanation_steps.map((s, i) => <li key={i}>{s}</li>)}
+            </ol>
+            {r.question.concept_tip && (
+              <p className="print-tip">💡 {r.question.concept_tip}</p>
+            )}
+          </div>
+        </div>
+      ))}
+    </>
+  );
+}
+
+export default function CompletionScreen({ results, primaryResults, onRetryWrong, onHome }) {
+  const [expandedIdx, setExpandedIdx] = useState(null);
+  // printMode: 'current' | 'primary'
+  const [printMode, setPrintMode] = useState('current');
+
+  const wrongResults = results.filter(r => !r.isCorrect);
+  const correctCount = results.filter(r => r.isCorrect).length;
+  const total = results.length;
+  const pct = Math.round((correctCount / total) * 100);
+  const catMap = buildCatMap(results);
+  const isRetrySession = primaryResults != null;
+
+  const today = new Date().toLocaleDateString('ko-KR', {
+    year: 'numeric', month: 'long', day: 'numeric', weekday: 'long',
+  });
+
+  function handlePrint(mode) {
+    setPrintMode(mode);
+    // React가 렌더링을 마친 뒤 프린트 다이얼로그 열기
+    requestAnimationFrame(() => requestAnimationFrame(() => window.print()));
   }
 
   return (
     <>
-      {/* ── SCREEN CONTENT (hidden during print) ── */}
+      {/* ── 화면 콘텐츠 (인쇄 시 숨김) ── */}
       <div className="container no-print">
         <div className="card completion-hero">
           <div className="completion-emoji">
             {pct >= 80 ? '🎉' : pct >= 60 ? '👍' : '💪'}
           </div>
-          <h1 className="completion-title">오늘 학습 완료!</h1>
+          <h1 className="completion-title">
+            {isRetrySession ? '오답 재풀이 완료!' : '오늘 학습 완료!'}
+          </h1>
           <p className="completion-date">{today}</p>
           <div className="score-display">
             <span className="score-num">{correctCount}</span>
@@ -80,7 +174,7 @@ export default function CompletionScreen({ results, onRetryWrong, onHome }) {
           </p>
         </div>
 
-        {/* Category breakdown */}
+        {/* 영역별 결과 */}
         {Object.keys(catMap).length > 0 && (
           <div className="card">
             <h2 className="section-title">영역별 결과</h2>
@@ -103,11 +197,23 @@ export default function CompletionScreen({ results, onRetryWrong, onHome }) {
           </div>
         )}
 
-        {/* Action buttons */}
+        {/* 버튼 */}
         <div className="action-buttons">
-          <button className="btn-pdf" onClick={handlePrint}>
-            🖨️ 결과 PDF 저장
-          </button>
+          {/* 재풀이 세션이면 두 PDF 버튼, 아니면 하나 */}
+          {isRetrySession ? (
+            <>
+              <button className="btn-pdf" onClick={() => handlePrint('primary')}>
+                🖨️ 전체 세션 PDF 저장 ({primaryResults.length}문제)
+              </button>
+              <button className="btn-pdf-secondary" onClick={() => handlePrint('current')}>
+                🖨️ 오답 재풀이 PDF 저장 ({results.length}문제)
+              </button>
+            </>
+          ) : (
+            <button className="btn-pdf" onClick={() => handlePrint('current')}>
+              🖨️ 결과 PDF 저장
+            </button>
+          )}
           {wrongResults.length > 0 && (
             <button className="btn-retry" onClick={onRetryWrong}>
               🔄 오답만 다시 풀기 ({wrongResults.length}문제)
@@ -118,7 +224,7 @@ export default function CompletionScreen({ results, onRetryWrong, onHome }) {
           </button>
         </div>
 
-        {/* Wrong question review (screen only) */}
+        {/* 틀린 문제 다시 보기 */}
         {wrongResults.length > 0 && (
           <div className="card">
             <h2 className="section-title">틀린 문제 다시 보기</h2>
@@ -156,79 +262,19 @@ export default function CompletionScreen({ results, onRetryWrong, onHome }) {
         )}
       </div>
 
-      {/* ── PRINT-ONLY VIEW ── */}
+      {/* ── 인쇄 전용 뷰 (printMode에 따라 다른 결과 출력) ── */}
       <div className="print-only">
-        <div className="print-header">
-          <h1 className="print-main-title">🐍 파이썬 학습 결과</h1>
-          <p className="print-date">{today}</p>
-          <p className="print-score">
-            정답 {correctCount} / {total} 문제 &nbsp;|&nbsp; 정답률 {pct}%
-          </p>
-        </div>
-
-        {/* Category summary table */}
-        <table className="print-cat-table">
-          <thead>
-            <tr>
-              <th>영역</th><th>정답</th><th>전체</th><th>정답률</th>
-            </tr>
-          </thead>
-          <tbody>
-            {Object.entries(catMap).map(([cat, { correct, total: t }]) => (
-              <tr key={cat}>
-                <td>{CATEGORY_LABELS[cat]}</td>
-                <td>{correct}</td>
-                <td>{t}</td>
-                <td>{t > 0 ? Math.round((correct / t) * 100) : 0}%</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-
-        <hr className="print-divider" />
-
-        {/* All questions */}
-        {results.map((r, idx) => (
-          <div key={r.question.id} className="print-question">
-            <div className="print-q-header">
-              <span className="print-q-num">문제 {idx + 1}</span>
-              <span className="print-q-cat">[{CATEGORY_LABELS[r.question.category]}]</span>
-              <span className={`print-q-result ${r.isCorrect ? 'print-correct' : 'print-wrong'}`}>
-                {r.isCorrect ? '⭕ 정답' : '❌ 오답'}
-              </span>
-            </div>
-            <p className="print-q-title">{r.question.title}</p>
-            {r.question.code && <CodeBlockPrint code={r.question.code} />}
-            {r.question.type === 'multiple_choice' && (
-              <ul className="print-choices">
-                {r.question.choices.map((c, ci) => (
-                  <li
-                    key={ci}
-                    className={
-                      c === r.question.answer ? 'print-choice-correct' :
-                      c === r.userAnswer ? 'print-choice-wrong' : ''
-                    }
-                  >
-                    {'①②③④⑤'[ci]} {c}
-                  </li>
-                ))}
-              </ul>
-            )}
-            <div className="print-answer-line">
-              내 답: <strong>{r.userAnswer || '(미응답)'}</strong>
-              &nbsp;&nbsp; 정답: <strong className="green">{r.question.answer}</strong>
-            </div>
-            <div className="print-explanation">
-              <strong>📝 단계별 풀이</strong>
-              <ol>
-                {r.question.explanation_steps.map((s, i) => <li key={i}>{s}</li>)}
-              </ol>
-              {r.question.concept_tip && (
-                <p className="print-tip">💡 {r.question.concept_tip}</p>
-              )}
-            </div>
-          </div>
-        ))}
+        {printMode === 'primary' && primaryResults ? (
+          <PrintView
+            results={primaryResults}
+            label="전체 세션 결과"
+          />
+        ) : (
+          <PrintView
+            results={results}
+            label={isRetrySession ? '오답 재풀이 결과' : null}
+          />
+        )}
       </div>
     </>
   );

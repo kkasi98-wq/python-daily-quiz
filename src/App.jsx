@@ -13,6 +13,7 @@ export default function App() {
   const [questions, setQuestions] = useState([]);
   const [currentIdx, setCurrentIdx] = useState(0);
   const [sessionResults, setSessionResults] = useState([]);
+  const [primaryResults, setPrimaryResults] = useState(null); // 원본 세션 보존
   const [stats, setStats] = useState(null);
 
   const handleSelectUser = useCallback((user) => {
@@ -51,11 +52,16 @@ export default function App() {
     const wrongQuestions = sessionResults
       .filter(r => !r.isCorrect)
       .map(r => r.question);
-    if (wrongQuestions.length > 0) startQuiz(wrongQuestions);
-  }, [sessionResults, startQuiz]);
+    if (wrongQuestions.length > 0) {
+      // 원본 세션 결과를 보존한 뒤 재풀이 시작
+      if (!primaryResults) setPrimaryResults(sessionResults);
+      startQuiz(wrongQuestions);
+    }
+  }, [sessionResults, primaryResults, startQuiz]);
 
   const goHome = useCallback(() => {
     setStats(loadStats(currentUser.id));
+    setPrimaryResults(null);
     setScreen('start');
   }, [currentUser]);
 
@@ -85,6 +91,7 @@ export default function App() {
   return (
     <CompletionScreen
       results={sessionResults}
+      primaryResults={primaryResults}
       user={currentUser}
       onRetryWrong={retryWrong}
       onHome={goHome}
