@@ -1,4 +1,7 @@
-const KEY = 'pythonQuizStats';
+const makeKey = (userId) => `pythonQuizStats_${userId}`;
+
+// 구버전 단일 키 제거 (기록 리셋)
+try { localStorage.removeItem('pythonQuizStats'); } catch {}
 
 const DEFAULT_STATS = {
   totalAnswered: 0,
@@ -17,13 +20,11 @@ const DEFAULT_STATS = {
   questionHistory: {},
 };
 
-export function loadStats() {
+export function loadStats(userId) {
   try {
-    const raw = localStorage.getItem(KEY);
+    const raw = localStorage.getItem(makeKey(userId));
     if (!raw) return structuredClone(DEFAULT_STATS);
-    const parsed = JSON.parse(raw);
-    // Ensure all keys exist (backward compat)
-    return { ...structuredClone(DEFAULT_STATS), ...parsed };
+    return { ...structuredClone(DEFAULT_STATS), ...JSON.parse(raw) };
   } catch {
     return structuredClone(DEFAULT_STATS);
   }
@@ -39,13 +40,12 @@ function yesterdayStr() {
   return d.toISOString().slice(0, 10);
 }
 
-export function saveSessionResult(results) {
-  const stats = loadStats();
+export function saveSessionResult(results, userId) {
+  const stats = loadStats(userId);
   const today = todayStr();
 
-  // Update streak
   if (stats.lastStudyDate === today) {
-    // Already studied today, streak unchanged
+    // 오늘 이미 학습함 — streak 유지
   } else if (stats.lastStudyDate === yesterdayStr()) {
     stats.streak += 1;
   } else {
@@ -53,7 +53,6 @@ export function saveSessionResult(results) {
   }
   stats.lastStudyDate = today;
 
-  // Update totals
   results.forEach(({ question, isCorrect }) => {
     stats.totalAnswered += 1;
     if (isCorrect) stats.totalCorrect += 1;
@@ -65,18 +64,16 @@ export function saveSessionResult(results) {
     }
 
     const qid = question.id;
-    if (!stats.questionHistory[qid]) {
-      stats.questionHistory[qid] = { correct: 0, total: 0 };
-    }
+    if (!stats.questionHistory[qid]) stats.questionHistory[qid] = { correct: 0, total: 0 };
     stats.questionHistory[qid].total += 1;
     if (isCorrect) stats.questionHistory[qid].correct += 1;
   });
 
-  localStorage.setItem(KEY, JSON.stringify(stats));
+  localStorage.setItem(makeKey(userId), JSON.stringify(stats));
   return stats;
 }
 
-export function resetStats() {
-  localStorage.removeItem(KEY);
+export function resetStats(userId) {
+  localStorage.removeItem(makeKey(userId));
   return structuredClone(DEFAULT_STATS);
 }

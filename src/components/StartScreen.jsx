@@ -34,7 +34,7 @@ function StatBar({ label, correct, total, color }) {
   );
 }
 
-export default function StartScreen({ stats, onStart }) {
+export default function StartScreen({ stats, user, onStart, onChangeUser }) {
   const { totalAnswered, totalCorrect, streak, categoryStats } = stats;
   const overallPct = totalAnswered > 0
     ? Math.round((totalCorrect / totalAnswered) * 100)
@@ -42,6 +42,15 @@ export default function StartScreen({ stats, onStart }) {
 
   return (
     <div className="container">
+      {/* 현재 유저 표시 */}
+      <div className="user-header">
+        <span className="user-header-emoji">{user.emoji}</span>
+        <span className="user-header-name">{user.label}의 학습</span>
+        <button className="user-header-btn" onClick={onChangeUser}>
+          사용자 바꾸기
+        </button>
+      </div>
+
       <div className="hero-card">
         <div className="hero-emoji">🐍</div>
         <h1 className="hero-title">파이썬 매일 학습</h1>
