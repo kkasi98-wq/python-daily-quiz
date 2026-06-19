@@ -7,6 +7,10 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    env:
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_ORG_ID: team_DaeaBX2CXndG08m9zYsUjFWu
+      VERCEL_PROJECT_ID: prj_RG93uHlKnl1ThwmXsNnCUQsxpbOB
     steps:
       - uses: actions/checkout@v4
 
@@ -14,7 +18,4 @@ jobs:
         run: npm install -g vercel
 
       - name: Deploy to Vercel
-        run: vercel deploy --prod --token=${{ secrets.VERCEL_TOKEN }} --yes
-        env:
-          VERCEL_ORG_ID: team_DaeaBX2CXndG08m9zYsUjFWu
-          VERCEL_PROJECT_ID: prj_RG93uHlKnl1ThwmXsNnCUQsxpbOB
+        run: vercel deploy --prod --yes
